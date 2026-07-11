@@ -107,11 +107,7 @@ def _check_dead_layer(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
             continue
         if info.stats.mean is None:
             continue
-        if (
-            abs(info.stats.mean) < 1e-8
-            and info.stats.std is not None
-            and info.stats.std < 1e-8
-        ):
+        if abs(info.stats.mean) < 1e-8 and info.stats.std is not None and info.stats.std < 1e-8:
             anomalies.append(
                 Anomaly(
                     type=AnomalyType.DEAD_LAYER,
@@ -204,9 +200,7 @@ def _check_nan_gradient(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
     )
 
 
-def _check_variance_spikes(
-    layers: list[LayerTrace], anomalies: list[Anomaly]
-) -> None:
+def _check_variance_spikes(layers: list[LayerTrace], anomalies: list[Anomaly]) -> None:
     """Compare variance across sequential layers to detect sudden spikes."""
     prev_std: float | None = None
     prev_name: str = ""

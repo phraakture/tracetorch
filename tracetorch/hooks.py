@@ -37,12 +37,8 @@ class HookManager:
             if not isinstance(module, nn.Module):
                 continue
 
-            self._hooks.append(
-                module.register_forward_pre_hook(self._make_pre_hook())
-            )
-            self._hooks.append(
-                module.register_forward_hook(self._make_forward_hook(module_name))
-            )
+            self._hooks.append(module.register_forward_pre_hook(self._make_pre_hook()))
+            self._hooks.append(module.register_forward_hook(self._make_forward_hook(module_name)))
             self._hooks.append(
                 module.register_full_backward_hook(self._make_backward_hook(module_name))
             )
@@ -66,9 +62,7 @@ class HookManager:
 
         return pre_hook
 
-    def _make_forward_hook(
-        self, module_name: str
-    ) -> Callable[..., Any]:
+    def _make_forward_hook(self, module_name: str) -> Callable[..., Any]:
         def hook(
             mod: nn.Module,
             inputs: tuple[Any, ...],
@@ -84,9 +78,7 @@ class HookManager:
 
         return hook
 
-    def _make_backward_hook(
-        self, module_name: str
-    ) -> Callable[..., Any]:
+    def _make_backward_hook(self, module_name: str) -> Callable[..., Any]:
         def hook(
             mod: nn.Module,
             grad_in: tuple[Any, ...],

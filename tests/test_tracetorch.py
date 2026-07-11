@@ -575,9 +575,7 @@ class TestTraceSession:
             loss = out.sum()
             loss.backward()
 
-        linear_layers = [
-            lay for lay in session.record.layers if lay.module_type == "Linear"
-        ]
+        linear_layers = [lay for lay in session.record.layers if lay.module_type == "Linear"]
         assert len(linear_layers) > 0
         for layer in linear_layers:
             assert layer.grad_norm is not None
