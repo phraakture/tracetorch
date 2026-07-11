@@ -18,7 +18,7 @@ A forensic trace console for PyTorch models.
 <p>
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg" alt="PyTorch">
-  <img src="https://img.shields.io/github/license/phraakture/tracetorch" alt="License">
+  <img src="https://img.shields.io/github/license/phraakture/tracetorch?v=1" alt="License">
   </p>
 
 ## Install
