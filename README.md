@@ -59,6 +59,10 @@ Inspect the saved trace:
 tracetorch inspect trace.json
 ```
 
+<p align="center">
+  <img src="assets/ss.jpg" alt="TraceTorch CLI output" width="100%">
+</p>
+
 ## What gets captured
 
 For each child module reached through `model.named_modules()`:
