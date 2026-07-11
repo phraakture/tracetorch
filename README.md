@@ -2,21 +2,7 @@
   <img src="assets/header.jpg?v=2" alt="TraceTorch" width="100%">
 </p>
 
-<h1 align="center">TraceTorch</h1>
-
-<p align="center">
-  <strong>A forensic trace console for PyTorch models.</strong>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg" alt="PyTorch">
-  <img src="https://img.shields.io/github/license/phraakture/tracetorch" alt="License">
-</p>
-
----
-
-Drop-in PyTorch observability. Records every `nn.Module` during forward/backward, captures tensor metadata, detects anomalies, exports JSON, and inspects from the terminal — zero model code changes.
+A forensic trace console for PyTorch models.
 
 ## Features
 
@@ -28,6 +14,12 @@ Drop-in PyTorch observability. Records every `nn.Module` during forward/backward
 - **JSON export** -- structured, flat format designed for dashboards and CI pipelines
 - **Rich CLI inspector** -- nested layer tree, anomaly warnings, model summary in the terminal
 - **Accurate latency** -- pre-hook to post-hook timing, not just stat-computation overhead
+
+<p>
+  <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
+  <img src="https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg" alt="PyTorch">
+  <img src="https://img.shields.io/github/license/phraakture/tracetorch" alt="License">
+  </p>
 
 ## Install
 
