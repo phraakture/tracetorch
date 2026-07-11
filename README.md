@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/header.jpg" alt="TraceTorch" width="100%">
+  <img src="assets/header.jpg?v=2" alt="TraceTorch" width="100%">
 </p>
 
 <h1 align="center">TraceTorch</h1>
