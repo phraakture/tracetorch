@@ -73,9 +73,7 @@ class TraceSession(AbstractContextManager["TraceSession"]):
     def __exit__(self, *args: Any) -> None:
         self._hook_manager.disable()
         self._hook_manager.unregister()
-        self._record.metadata["total_time_ms"] = (
-            time.perf_counter() - self._start_time
-        ) * 1000
+        self._record.metadata["total_time_ms"] = (time.perf_counter() - self._start_time) * 1000
         self._anomalies = detect_anomalies(self._record)
         self._record.warnings = [a.to_dict() for a in self._anomalies]
 

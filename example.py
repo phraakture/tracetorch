@@ -29,7 +29,7 @@ def main() -> None:
 
     with session:
         input_ids = torch.randint(0, 1000, (8, 512))
-        output = model(input_ids)
+        model(input_ids)
 
     print(session.summary())
     print()
