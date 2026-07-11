@@ -5,7 +5,7 @@
 <h1 align="center">TraceTorch</h1>
 
 <p align="center">
-  <strong>Chrome DevTools for neural networks.</strong>
+  <strong>A forensic trace console for PyTorch models.</strong>
 </p>
 
 <p align="center">
