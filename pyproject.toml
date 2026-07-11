@@ -5,10 +5,26 @@ description = "Chrome DevTools for neural networks — interactive forensic debu
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "torch>=2.0",
     "rich>=13.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/phraakture/tracetorch"
+Repository = "https://github.com/phraakture/tracetorch"
+Issues = "https://github.com/phraakture/tracetorch/issues"
 
 [project.optional-dependencies]
 dev = [
