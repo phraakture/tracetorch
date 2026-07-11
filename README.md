@@ -18,13 +18,14 @@ A forensic trace console for PyTorch models.
 <p>
   <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python">
   <img src="https://img.shields.io/badge/pytorch-2.0+-ee4c2c.svg" alt="PyTorch">
+  <img src="https://img.shields.io/pypi/v/tracetorch-ml" alt="PyPI">
   <img src="https://img.shields.io/github/license/phraakture/tracetorch?v=1" alt="License">
   </p>
 
 ## Install
 
 ```bash
-pip install tracetorch
+pip install tracetorch-ml
 ```
 
 Requires Python 3.11+. Runtime dependencies: PyTorch 2.0+, Rich 13.0+.
