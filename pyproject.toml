@@ -1,7 +1,8 @@
 [project]
 name = "tracetorch-ml"
 version = "0.1.0"
-description = "Chrome DevTools for neural networks — interactive forensic debugging for PyTorch models"
+description = "A forensic trace console for PyTorch models."
+
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/header.jpg?v=2" alt="TraceTorch" width="100%">
+  <img src="assets/header.jpg?v=3" alt="TraceTorch" width="100%">
 </p>
 
 A forensic trace console for PyTorch models.
@@ -60,7 +60,7 @@ tracetorch inspect trace.json
 ```
 
 <p align="center">
-  <img src="assets/ss.jpg" alt="TraceTorch CLI output" width="100%">
+  <img src="assets/ss.jpg?v=2" alt="TraceTorch CLI output" width="100%">
 </p>
 
 ## What gets captured

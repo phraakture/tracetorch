@@ -140,7 +140,7 @@ def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="tracetorch",
-        description="Chrome DevTools for neural networks",
+        description="A forensic trace console for PyTorch models.",
     )
     subparsers = parser.add_subparsers(dest="command")
 

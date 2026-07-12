@@ -1,4 +1,4 @@
-"""TraceTorch — Chrome DevTools for neural networks.
+"""TraceTorch — A forensic trace console for PyTorch models.
 
 A production-grade Python library that gives ML engineers an interactive,
 forensic view of what happens inside PyTorch models during execution.
