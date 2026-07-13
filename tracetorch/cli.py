@@ -109,9 +109,7 @@ def watch_command(
     """
     path = Path(trace_path)
     if not path.exists():
-        console.print(
-            f"[yellow]Waiting for {path} to appear... (Ctrl+C to exit)[/yellow]"
-        )
+        console.print(f"[yellow]Waiting for {path} to appear... (Ctrl+C to exit)[/yellow]")
         while not path.exists():
             try:
                 time.sleep(interval)
@@ -134,9 +132,7 @@ def watch_command(
                 last_mtime = mtime
                 first_render = False
                 console.clear()
-                console.print(
-                    f"[dim]Watching {path} — Ctrl+C to exit[/dim]\n"
-                )
+                console.print(f"[dim]Watching {path} — Ctrl+C to exit[/dim]\n")
                 if mtime is not None:
                     try:
                         record = load_json(path)

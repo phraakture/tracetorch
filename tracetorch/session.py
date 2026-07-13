@@ -117,9 +117,7 @@ class TraceSession(AbstractContextManager["TraceSession"]):
         # double-fire for each forwards, producing duplicate traces and
         # unremovable handles.
         if self._entered:
-            raise RuntimeError(
-                "TraceSession is already active -- cannot re-enter before __exit__."
-            )
+            raise RuntimeError("TraceSession is already active -- cannot re-enter before __exit__.")
         self._entered = True
 
         # Reset all per-session state so a TraceSession can be safely re-entered
@@ -228,14 +226,10 @@ class TraceSession(AbstractContextManager["TraceSession"]):
 
         # Slowest backward pass (only when one ran).
         bwd_layers = [
-            layer
-            for layer in self._record.layers
-            if (layer.bwd_latency_ms_mean or 0) > 0
+            layer for layer in self._record.layers if (layer.bwd_latency_ms_mean or 0) > 0
         ]
         if bwd_layers:
-            slowest_bwd = max(
-                bwd_layers, key=lambda layer: layer.bwd_latency_ms_mean or 0.0
-            )
+            slowest_bwd = max(bwd_layers, key=lambda layer: layer.bwd_latency_ms_mean or 0.0)
             lines.append(
                 f"Slowest backward: {slowest_bwd.full_name} "
                 f"({format_ms(slowest_bwd.bwd_latency_ms_mean or 0)} mean / "
@@ -246,14 +240,10 @@ class TraceSession(AbstractContextManager["TraceSession"]):
         # GPU memory: largest forward alloc delta surfaces the allocator-heavy
         # layer (often the OOM culprit). Only shown when CUDA traces ran.
         fwd_mem_layers = [
-            layer
-            for layer in self._record.layers
-            if layer.fwd_mem_alloc_delta is not None
+            layer for layer in self._record.layers if layer.fwd_mem_alloc_delta is not None
         ]
         if fwd_mem_layers:
-            heaviest = max(
-                fwd_mem_layers, key=lambda layer: layer.fwd_mem_alloc_delta or 0.0
-            )
+            heaviest = max(fwd_mem_layers, key=lambda layer: layer.fwd_mem_alloc_delta or 0.0)
             if (heaviest.fwd_mem_alloc_delta or 0) > 0:
                 lines.append(
                     f"Heaviest fwd mem: {heaviest.full_name} "
@@ -261,9 +251,7 @@ class TraceSession(AbstractContextManager["TraceSession"]):
                     f"+{format_bytes(heaviest.fwd_mem_reserved_delta)} reserved)"
                 )
             bwd_mem_layers = [
-                layer
-                for layer in self._record.layers
-                if layer.bwd_mem_alloc_delta is not None
+                layer for layer in self._record.layers if layer.bwd_mem_alloc_delta is not None
             ]
             if bwd_mem_layers:
                 heaviest_bwd = max(

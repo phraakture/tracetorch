@@ -98,8 +98,8 @@ def load_json(path: str | Path) -> TraceRecord:
                 latency_ms_max=layer_dict.get("latency_ms_max"),
                 latency_ms_mean=layer_dict.get("latency_ms_mean"),
                 forward_count=layer_dict.get(
-            "forward_count", 1 if layer_dict.get("latency_ms", 0.0) else 0
-        ),
+                    "forward_count", 1 if layer_dict.get("latency_ms", 0.0) else 0
+                ),
                 has_nan=layer_dict.get("has_nan", False),
                 has_inf=layer_dict.get("has_inf", False),
                 grad_norm=layer_dict.get("grad_norm"),

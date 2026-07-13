@@ -200,8 +200,7 @@ def _diff_latency(
                 kind="latency_regression",
                 layer=name,
                 message=(
-                    f"Latency regression: {base_lat:.3f}ms -> {curr_lat:.3f}ms "
-                    f"(+{rel * 100:.1f}%)"
+                    f"Latency regression: {base_lat:.3f}ms -> {curr_lat:.3f}ms (+{rel * 100:.1f}%)"
                 ),
                 details={
                     "baseline_ms": base_lat,
@@ -219,8 +218,7 @@ def _diff_latency(
                 kind="latency_improvement",
                 layer=name,
                 message=(
-                    f"Latency improved: {base_lat:.3f}ms -> {curr_lat:.3f}ms "
-                    f"({rel * 100:.1f}%)"
+                    f"Latency improved: {base_lat:.3f}ms -> {curr_lat:.3f}ms ({rel * 100:.1f}%)"
                 ),
                 details={
                     "baseline_ms": base_lat,
@@ -244,11 +242,7 @@ def _diff_grad_norm(
         return
     rel = (curr.grad_norm - base.grad_norm) / abs(base.grad_norm)
     if abs(rel) > threshold:
-        severity = (
-            DiffSeverity.WARNING
-            if curr.grad_norm > base.grad_norm
-            else DiffSeverity.INFO
-        )
+        severity = DiffSeverity.WARNING if curr.grad_norm > base.grad_norm else DiffSeverity.INFO
         diff.entries.append(
             DiffEntry(
                 severity=severity,
@@ -280,19 +274,14 @@ def _diff_activation_std(
         return
     rel = (curr_std - base_std) / base_std
     if abs(rel) > threshold:
-        severity = (
-            DiffSeverity.WARNING
-            if curr_std > base_std
-            else DiffSeverity.INFO
-        )
+        severity = DiffSeverity.WARNING if curr_std > base_std else DiffSeverity.INFO
         diff.entries.append(
             DiffEntry(
                 severity=severity,
                 kind="activation_std_change",
                 layer=name,
                 message=(
-                    f"Output std changed: {base_std:.4f} -> "
-                    f"{curr_std:.4f} ({rel * 100:+.1f}%)"
+                    f"Output std changed: {base_std:.4f} -> {curr_std:.4f} ({rel * 100:+.1f}%)"
                 ),
                 details={
                     "baseline": base_std,

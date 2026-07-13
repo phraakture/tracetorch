@@ -39,6 +39,7 @@ class RepeatedForwardModel(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.relu(self.linear(x))
 
+
 # --- Fixtures ---
 
 
@@ -535,9 +536,7 @@ class TestVarianceSpikeOrderIndependence:
 
     def test_per_layer_input_to_output_spike_flagged(self) -> None:
         # A layer that amplifies std 10x between its own input and output.
-        record = TraceRecord(
-            layers=[self._branch_layer("amp", in_std=0.1, out_std=2.0)]
-        )
+        record = TraceRecord(layers=[self._branch_layer("amp", in_std=0.1, out_std=2.0)])
         anomalies = detect_anomalies(record)
         spikes = [a for a in anomalies if a.type == AnomalyType.EXPLODING_VARIANCE]
         assert spikes, "expected per-layer variance spike to be flagged"
@@ -560,9 +559,7 @@ class TestVarianceSpikeOrderIndependence:
         )
         anomalies = detect_anomalies(record)
         # No spike for branch.b: its own 1.0 -> 1.0 is fine.
-        spike_layers = {
-            a.layer for a in anomalies if a.type == AnomalyType.EXPLODING_VARIANCE
-        }
+        spike_layers = {a.layer for a in anomalies if a.type == AnomalyType.EXPLODING_VARIANCE}
         assert "branch.b" not in spike_layers
         # branch.a's output (0.01) is smaller than its input (1.0): no spike.
         assert "branch.a" not in spike_layers
@@ -1287,9 +1284,7 @@ class TestThresholds:
             ]
         )
         # Default threshold is 100; std=20 is not exploding by default.
-        assert not any(
-            a.type == AnomalyType.EXPLODING_VARIANCE for a in detect_anomalies(record)
-        )
+        assert not any(a.type == AnomalyType.EXPLODING_VARIANCE for a in detect_anomalies(record))
         # Lower the threshold to 10 and it now flags.
         anomalies = detect_anomalies(
             record,
@@ -1324,13 +1319,9 @@ class TestThresholds:
             ]
         )
         # Default ratio is 10; 0.1 -> 0.5 is a 5x ratio, not flagged.
-        assert not any(
-            a.type == AnomalyType.EXPLODING_VARIANCE for a in detect_anomalies(record)
-        )
+        assert not any(a.type == AnomalyType.EXPLODING_VARIANCE for a in detect_anomalies(record))
         # Lower the ratio to 3x and it flags.
-        anomalies = detect_anomalies(
-            record, thresholds=Thresholds(variance_spike_ratio=3.0)
-        )
+        anomalies = detect_anomalies(record, thresholds=Thresholds(variance_spike_ratio=3.0))
         assert any(a.type == AnomalyType.EXPLODING_VARIANCE for a in anomalies)
 
 
@@ -1365,9 +1356,7 @@ class TestBackwardLatency:
             loss = out.sum()
             loss.backward()
 
-        linear = next(
-            layer for layer in session.record.layers if layer.module_type == "Linear"
-        )
+        linear = next(layer for layer in session.record.layers if layer.module_type == "Linear")
         assert linear.backward_count >= 1
         assert linear.bwd_latency_ms > 0
         assert linear.bwd_latency_ms_min is not None
@@ -1413,9 +1402,7 @@ class TestGradInCapture:
             out = model(x)
             out.sum().backward()
 
-        linear = next(
-            layer for layer in session.record.layers if layer.module_type == "Linear"
-        )
+        linear = next(layer for layer in session.record.layers if layer.module_type == "Linear")
         assert linear.grad_in_norm is not None
         assert linear.grad_in_norm >= 0
         assert linear.grad_in_mean is not None
@@ -1515,9 +1502,7 @@ class TestSummaryBackwardLatency:
         session._anomalies = []
         summary = session.summary()
         assert "Slowest backward" in summary
-        backward_line = next(
-            line for line in summary.splitlines() if "Slowest backward" in line
-        )
+        backward_line = next(line for line in summary.splitlines() if "Slowest backward" in line)
         assert "a" in backward_line
 
 
@@ -1613,9 +1598,7 @@ class TestFilterOptions:
     def test_combined_filters(self) -> None:
         from tracetorch.cli import FilterOptions
 
-        opts = FilterOptions(
-            name_pattern="enc*", module_type="Linear", min_latency_ms=0.5
-        )
+        opts = FilterOptions(name_pattern="enc*", module_type="Linear", min_latency_ms=0.5)
         assert opts.matches(self._layer("enc1", "Linear", latency_ms_mean=1.0))
         assert not opts.matches(self._layer("enc1", "ReLU", latency_ms_mean=1.0))
         assert not opts.matches(self._layer("enc1", "Linear", latency_ms_mean=0.1))
