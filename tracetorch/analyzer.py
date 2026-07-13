@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
-from tracetorch.collector import LayerTrace, TraceRecord
+from tracetorch.collector import LayerTrace, TensorInfo, TraceRecord
 
 
 class AnomalyType(StrEnum):
@@ -52,22 +52,65 @@ class Anomaly:
         return d
 
 
-def detect_anomalies(record: TraceRecord) -> list[Anomaly]:
-    """Analyze a trace record and return detected anomalies."""
+@dataclass(frozen=True)
+class Thresholds:
+    """Configurable thresholds for anomaly detection.
+
+    All values are sensible defaults for typical float32 training. Override
+    them via ``TraceSession(model, thresholds=Thresholds(dead_layer_std=1e-4,
+    ...))`` to tune sensitivity for unusual models (e.g. quantized or
+    sparse activations).
+    """
+
+    # ``dead_layer``: layer flagged when ``|mean| < dead_layer_mean`` and
+    # ``std < dead_layer_std``. Defaults are tighter than the original 1e-8 in
+    # name only -- the std threshold is raised to 1e-6 to avoid false positives
+    # on layers that legitimately produce very small activations (e.g. an
+    # L2-normalized projection or a saturated sigmoid at init).
+    dead_layer_mean: float = 1e-6
+    dead_layer_std: float = 1e-6
+
+    # ``exploding_variance``: output std above this absolute value triggers
+    # the warning. ``high_variance`` is the info-level band between
+    # ``high_variance_min`` and ``exploding_variance_std``.
+    exploding_variance_std: float = 100.0
+    high_variance_min: float = 10.0
+
+    # Per-layer input->output std ratio above which a variance spike is
+    # flagged.
+    variance_spike_ratio: float = 10.0
+
+
+# Module-level default singleton. Use ``Thresholds()`` to override.
+DEFAULT_THRESHOLDS = Thresholds()
+
+
+def detect_anomalies(
+    record: TraceRecord,
+    thresholds: Thresholds | None = None,
+) -> list[Anomaly]:
+    """Analyze a trace record and return detected anomalies.
+
+    Args:
+        record: The trace record to inspect.
+        thresholds: Optional override of anomaly-detection thresholds. When
+            ``None``, ``DEFAULT_THRESHOLDS`` is used.
+    """
+    th = thresholds if thresholds is not None else DEFAULT_THRESHOLDS
     anomalies: list[Anomaly] = []
 
     for layer in record.layers:
         _check_nan(layer, anomalies)
         _check_inf(layer, anomalies)
-        _check_dead_layer(layer, anomalies)
-        _check_exploding_variance(layer, anomalies)
-        _check_high_variance(layer, anomalies)
+        _check_dead_layer(layer, anomalies, th)
+        _check_exploding_variance(layer, anomalies, th)
+        _check_high_variance(layer, anomalies, th)
         _check_empty_output(layer, anomalies)
         _check_zero_gradient(layer, anomalies)
         _check_nan_gradient(layer, anomalies)
 
-    # Cross-layer checks
-    _check_variance_spikes(record.layers, anomalies)
+    # Cross-layer / per-layer checks
+    _check_variance_spikes(record.layers, anomalies, th)
 
     return anomalies
 
@@ -100,14 +143,20 @@ def _check_inf(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
     )
 
 
-def _check_dead_layer(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
+def _check_dead_layer(
+    layer: LayerTrace,
+    anomalies: list[Anomaly],
+    th: Thresholds,
+) -> None:
     """Detect layers whose output is all zeros or near-zero."""
     for info in layer.outputs:
         if info.stats is None:
             continue
         if info.stats.mean is None:
             continue
-        if abs(info.stats.mean) < 1e-8 and info.stats.std is not None and info.stats.std < 1e-8:
+        if abs(info.stats.mean) < th.dead_layer_mean and (
+            info.stats.std is not None and info.stats.std < th.dead_layer_std
+        ):
             anomalies.append(
                 Anomaly(
                     type=AnomalyType.DEAD_LAYER,
@@ -123,12 +172,16 @@ def _check_dead_layer(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
             )
 
 
-def _check_exploding_variance(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
+def _check_exploding_variance(
+    layer: LayerTrace,
+    anomalies: list[Anomaly],
+    th: Thresholds,
+) -> None:
     """Detect layers with extremely high output variance."""
     for info in layer.outputs:
         if info.stats is None or info.stats.std is None:
             continue
-        if info.stats.std > 100.0:
+        if info.stats.std > th.exploding_variance_std:
             anomalies.append(
                 Anomaly(
                     type=AnomalyType.EXPLODING_VARIANCE,
@@ -140,12 +193,16 @@ def _check_exploding_variance(layer: LayerTrace, anomalies: list[Anomaly]) -> No
             )
 
 
-def _check_high_variance(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
+def _check_high_variance(
+    layer: LayerTrace,
+    anomalies: list[Anomaly],
+    th: Thresholds,
+) -> None:
     """Detect layers with unusually high output variance (but not exploding)."""
     for info in layer.outputs:
         if info.stats is None or info.stats.std is None:
             continue
-        if 10.0 < info.stats.std <= 100.0:
+        if th.high_variance_min < info.stats.std <= th.exploding_variance_std:
             anomalies.append(
                 Anomaly(
                     type=AnomalyType.HIGH_VARIANCE,
@@ -200,34 +257,48 @@ def _check_nan_gradient(layer: LayerTrace, anomalies: list[Anomaly]) -> None:
     )
 
 
-def _check_variance_spikes(layers: list[LayerTrace], anomalies: list[Anomaly]) -> None:
-    """Compare variance across sequential layers to detect sudden spikes."""
-    prev_std: float | None = None
-    prev_name: str = ""
+def _check_variance_spikes(
+    layers: list[LayerTrace],
+    anomalies: list[Anomaly],
+    th: Thresholds,
+) -> None:
+    """Per-layer input-to-output variance spike detection.
 
+    A layer is flagged when its output std exceeds its input std by more than
+    ``th.variance_spike_ratio``x. This is **order-independent**: each layer is
+    evaluated against its own captured inputs, so branched models,
+    control-flow models, or shared submodules no longer produce false
+    positives from adjacent-but-unrelated layers that happened to run
+    earlier.
+    """
     for layer in layers:
-        for info in layer.outputs:
-            if info.stats is None or info.stats.std is None:
-                continue
-            if prev_std is not None and prev_std > 0:
-                ratio = info.stats.std / prev_std
-                if ratio > 10.0:
-                    anomalies.append(
-                        Anomaly(
-                            type=AnomalyType.EXPLODING_VARIANCE,
-                            severity=AnomalySeverity.WARNING,
-                            layer=layer.full_name,
-                            message=(
-                                f"Variance spike: std increased from {prev_std:.2f} "
-                                f"to {info.stats.std:.2f} (×{ratio:.1f})"
-                            ),
-                            details={
-                                "previous_layer": prev_name,
-                                "previous_std": prev_std,
-                                "current_std": info.stats.std,
-                                "ratio": ratio,
-                            },
-                        )
-                    )
-            prev_std = info.stats.std
-            prev_name = layer.full_name
+        in_std = _first_std(layer.inputs)
+        out_std = _first_std(layer.outputs)
+        if in_std is None or out_std is None or in_std <= 0:
+            continue
+        ratio = out_std / in_std
+        if ratio > th.variance_spike_ratio:
+            anomalies.append(
+                Anomaly(
+                    type=AnomalyType.EXPLODING_VARIANCE,
+                    severity=AnomalySeverity.WARNING,
+                    layer=layer.full_name,
+                    message=(
+                        f"Variance spike: std increased from {in_std:.2f} "
+                        f"to {out_std:.2f} (x{ratio:.1f})"
+                    ),
+                    details={
+                        "input_std": in_std,
+                        "output_std": out_std,
+                        "ratio": ratio,
+                    },
+                )
+            )
+
+
+def _first_std(infos: list[TensorInfo]) -> float | None:
+    """Return the first non-None std from a list of TensorInfo, or None."""
+    for info in infos:
+        if info.stats is not None and info.stats.std is not None:
+            return float(info.stats.std)
+    return None

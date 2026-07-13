@@ -24,7 +24,12 @@ def export_json(record: TraceRecord, path: str | Path) -> Path:
 
     data = record.to_dict()
     with filepath.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        # ``default=str`` so non-JSON-native values in user-supplied metadata
+        # (``torch.device``, ``dtype``, custom objects) stringify instead of
+        # raising ``TypeError: Object of type X is not JSON serializable``.
+        # Nested dataclasses are already serialised via ``to_dict()`` so this
+        # only catches the rare escape hatch cases.
+        json.dump(data, f, indent=2, ensure_ascii=False, default=str)
 
     return filepath
 
@@ -89,12 +94,32 @@ def load_json(path: str | Path) -> TraceRecord:
                 inputs=inputs,
                 outputs=outputs,
                 latency_ms=layer_dict.get("latency_ms", 0.0),
+                latency_ms_min=layer_dict.get("latency_ms_min"),
+                latency_ms_max=layer_dict.get("latency_ms_max"),
+                latency_ms_mean=layer_dict.get("latency_ms_mean"),
+                forward_count=layer_dict.get(
+            "forward_count", 1 if layer_dict.get("latency_ms", 0.0) else 0
+        ),
                 has_nan=layer_dict.get("has_nan", False),
                 has_inf=layer_dict.get("has_inf", False),
                 grad_norm=layer_dict.get("grad_norm"),
                 grad_mean=layer_dict.get("grad_mean"),
                 grad_has_nan=layer_dict.get("grad_has_nan", False),
                 has_zero_grad=layer_dict.get("has_zero_grad", False),
+                grad_in_norm=layer_dict.get("grad_in_norm"),
+                grad_in_mean=layer_dict.get("grad_in_mean"),
+                grad_in_has_nan=layer_dict.get("grad_in_has_nan", False),
+                bwd_latency_ms=layer_dict.get("bwd_latency_ms", 0.0),
+                bwd_latency_ms_min=layer_dict.get("bwd_latency_ms_min"),
+                bwd_latency_ms_max=layer_dict.get("bwd_latency_ms_max"),
+                bwd_latency_ms_mean=layer_dict.get("bwd_latency_ms_mean"),
+                backward_count=layer_dict.get(
+                    "backward_count", 1 if layer_dict.get("bwd_latency_ms", 0.0) else 0
+                ),
+                fwd_mem_alloc_delta=layer_dict.get("fwd_mem_alloc_delta"),
+                fwd_mem_reserved_delta=layer_dict.get("fwd_mem_reserved_delta"),
+                bwd_mem_alloc_delta=layer_dict.get("bwd_mem_alloc_delta"),
+                bwd_mem_reserved_delta=layer_dict.get("bwd_mem_reserved_delta"),
             )
         )
 

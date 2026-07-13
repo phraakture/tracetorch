@@ -8,16 +8,28 @@ from typing import Any
 import torch
 
 
-def compute_tensor_stats(tensor: torch.Tensor) -> dict[str, Any]:
+def compute_tensor_stats(
+    tensor: torch.Tensor,
+    *,
+    sample_threshold: int = 1_000_000,
+) -> dict[str, Any]:
     """Compute descriptive statistics for a tensor.
 
     Returns a dict with mean, std, min, max, nan_count, and inf_count.
-    Handles non-floating tensors by returning None for float-only stats.
+    Non-floating or empty tensors return None for the float-only fields.
+
+    Implementation notes:
+    - NaN / Inf counts are computed over the **whole** tensor (not the
+      sampled subset) since those are the primary anomaly signals and have
+      cheap mask-sum cost.
+    - Mean / std / min / max are computed on a strided subsample when the
+      tensor exceeds ``sample_threshold`` elements so cost stays bounded
+      for very large activations; the resulting statistics approximate the
+      tensor's true moments but the strided sample is unbiased.
+    - Uses ``aminmax()`` and ``std()`` fused kernels where possible.
     """
     with torch.no_grad():
-        is_floating = tensor.is_floating_point()
-
-        if not is_floating or tensor.numel() == 0:
+        if not tensor.is_floating_point() or tensor.numel() == 0:
             return {
                 "mean": None,
                 "std": None,
@@ -27,12 +39,32 @@ def compute_tensor_stats(tensor: torch.Tensor) -> dict[str, Any]:
                 "inf_count": 0,
             }
 
-        flat = tensor.flatten().float()
-        nan_count = int(torch.isnan(flat).sum().item())
-        inf_count = int(torch.isinf(flat).sum().item())
+        # Full-tensor NaN / Inf counts: cheap and exact, used for anomaly
+        # detection. Masks are kept for the subsampling pass below.
+        nan_mask = torch.isnan(tensor)
+        inf_mask = torch.isinf(tensor)
+        nan_count = int(nan_mask.sum().item())
+        inf_count = int(inf_mask.sum().item())
 
-        # Replace NaN/Inf for stat computation
-        clean = flat[torch.isfinite(flat)]
+        # Optional subsample for the mean/std/min/max pass on huge tensors.
+        for_stats = tensor
+        if tensor.numel() > sample_threshold and tensor.numel() > 1:
+            step = tensor.numel() // sample_threshold
+            for_stats = tensor.reshape(-1)[::step]
+            # Resample the masks to match; keep this consistent with the
+            # subsample so the "clean" subset is computed against the right
+            # finite-mask view.
+            flat_nan = nan_mask.reshape(-1)[::step]
+            flat_inf = inf_mask.reshape(-1)[::step]
+        else:
+            flat_nan = nan_mask
+            flat_inf = inf_mask
+
+        # Use float view only when needed for std/mean precision on half types.
+        if for_stats.dtype not in (torch.float32, torch.float64):
+            for_stats = for_stats.float()
+
+        clean = for_stats[~(flat_nan | flat_inf)]
         if clean.numel() == 0:
             return {
                 "mean": None,
@@ -43,11 +75,18 @@ def compute_tensor_stats(tensor: torch.Tensor) -> dict[str, Any]:
                 "inf_count": inf_count,
             }
 
+        cmin, cmax = clean.aminmax()
+        cmean = clean.mean()
+        if clean.numel() > 1:
+            cstd = clean.std(unbiased=False)
+        else:
+            cstd = torch.zeros((), dtype=clean.dtype)
+
         return {
-            "mean": float(clean.mean().item()),
-            "std": float(clean.std().item()) if clean.numel() > 1 else 0.0,
-            "min": float(clean.min().item()),
-            "max": float(clean.max().item()),
+            "mean": float(cmean.item()),
+            "std": float(cstd.item()),
+            "min": float(cmin.item()),
+            "max": float(cmax.item()),
             "nan_count": nan_count,
             "inf_count": inf_count,
         }
@@ -64,14 +103,32 @@ def format_params(count: int) -> str:
     return str(count)
 
 
+def format_bytes(num_bytes: float | None) -> str:
+    """Format a byte count in human-readable form (B/KiB/MiB/GiB).
+
+    Negative values are supported and used to show memory-release deltas.
+    ``None`` is rendered as ``-`` so callers can display "CPU layers" cleanly.
+    """
+    if num_bytes is None:
+        return "-"
+    sign = "-" if num_bytes < 0 else ""
+    n = abs(num_bytes)
+    if n >= 1024**3:
+        return f"{sign}{n / 1024**3:.2f}GiB"
+    if n >= 1024**2:
+        return f"{sign}{n / 1024**2:.2f}MiB"
+    if n >= 1024:
+        return f"{sign}{n / 1024:.1f}KiB"
+    return f"{sign}{n:.0f}B"
+
+
 def format_shape(shape: list[int] | tuple[int, ...]) -> str:
     """Format tensor shape as a readable string."""
     return "[" + ", ".join(str(d) for d in shape) + "]"
 
 
-def format_ms(seconds: float) -> str:
-    """Convert seconds to milliseconds with appropriate precision."""
-    ms = seconds * 1000
+def format_ms(ms: float) -> str:
+    """Format a millisecond value with appropriate precision."""
     if ms >= 100:
         return f"{ms:.0f}ms"
     if ms >= 10:
