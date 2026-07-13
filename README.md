@@ -67,7 +67,7 @@ tracetorch inspect trace.json
 ```
 
 <p align="center">
-  <img src="assets/ss.jpg?v=2" alt="TraceTorch CLI output" width="100%">
+  <img src="assets/ss.jpg?v=4" alt="TraceTorch CLI output" width="100%">
 </p>
 
 ## What gets captured
